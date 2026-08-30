@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EcoLoop AI — Battery Circularity</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --graphite:#1E1D19;
+  --surface:#26241D;
+  --surface-2:#322E23;
+  --copper:#C17A45;
+  --copper-bright:#E2996A;
+  --cell-green:#87AD70;
+  --alert-rust:#BD5B3F;
+  --ink:#F2EDE1;
+  --ink-dim:#9C9686;
+  --hairline:#3C3829;
+  --radius:3px;
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'IBM Plex Sans',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+}
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;
+  background:var(--graphite);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-size:14px;
+  line-height:1.5;
+}
+button,input{font-family:inherit;font-size:inherit;}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important;}}
+
+/* ---------- layout shell ---------- */
+.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh;}
+@media (max-width:860px){.app{grid-template-columns:1fr;}}
+
+.sidebar{
+  background:var(--surface);
+  border-right:1px solid var(--hairline);
+  padding:24px 18px;
+  display:flex;flex-direction:column;gap:28px;
+  position:sticky;top:0;height:100vh;
+}
+@media (max-width:860px){.sidebar{position:static;height:auto;}}
+
+.brand{display:flex;align-items:center;gap:12px;}
+.brand .logo{
+  width:36px;height:36px;flex:none;
+  background:var(--copper);
+  color:var(--graphite);
+  display:flex;align-items:center;justify-content:center;
+  font-size:19px;font-weight:700;
+  border-radius:var(--radius);
+  position:relative;
+}
+.brand .logo::after{
+  content:"";position:absolute;top:-5px;left:50%;transform:translateX(-50%);
+  width:12px;height:4px;background:var(--copper);border-radius:1px 1px 0 0;
+}
+.brand b{display:block;font-family:var(--font-display);font-size:15px;letter-spacing:.01em;}
+.brand small{display:block;color:var(--ink-dim);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em;margin-top:2px;}
+
+nav{display:flex;flex-direction:column;gap:2px;}
+.nav{
+  all:unset;cursor:pointer;
+  padding:10px 12px;border-radius:var(--radius);
+  color:var(--ink-dim);font-size:13px;font-weight:500;
+  border-left:2px solid transparent;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.nav:hover{background:var(--surface-2);color:var(--ink);}
+.nav.active{background:var(--surface-2);color:var(--copper-bright);border-left-color:var(--copper);}
+.nav:focus-visible{outline:2px solid var(--copper);outline-offset:2px;}
+
+.side-card{
+  margin-top:auto;
+  background:var(--surface-2);
+  border:1px solid var(--hairline);
+  border-radius:var(--radius);
+  padding:14px;
+}
+.side-card b{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--copper-bright);}
+.side-card p{margin:8px 0 0;color:var(--ink-dim);font-size:12px;}
+
+main{padding:28px 34px 60px;max-width:1180px;}
+@media (max-width:600px){main{padding:20px;}}
+
+header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:26px;gap:16px;flex-wrap:wrap;}
+.eyebrow{font-family:var(--font-mono);font-size:11px;letter-spacing:.14em;color:var(--copper);text-transform:uppercase;}
+h1{font-family:var(--font-display);font-size:26px;margin:6px 0 0;}
+.user-pill{
+  display:flex;flex-direction:column;align-items:flex-end;
+  font-size:12px;color:var(--cell-green);
+}
+.user-pill span{color:var(--ink-dim);font-size:11px;}
+
+.page{display:none;}
+.page.active{display:block;animation:rise .35s ease;}
+@keyframes rise{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+/* ---------- shared components ---------- */
+.panel{
+  background:var(--surface);
+  border:1px solid var(--hairline);
+  border-radius:var(--radius);
+  padding:20px 22px;
+  margin-bottom:20px;
+  position:relative;
+}
+.panel::before{
+  content:"";position:absolute;top:-1px;left:20px;width:16px;height:5px;
+  background:var(--graphite);border-left:1px solid var(--hairline);border-right:1px solid var(--hairline);
+}
+.panel h3{font-family:var(--font-display);font-size:14px;margin:0 0 14px;letter-spacing:.01em;}
+.panel h2{font-family:var(--font-display);font-size:20px;margin:0 0 4px;}
+.panel p{color:var(--ink-dim);margin:0;font-size:13px;}
+
+.section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:16px;flex-wrap:wrap;}
+
+.primary{
+  all:unset;cursor:pointer;
+  background:var(--copper);color:var(--graphite);
+  padding:10px 16px;border-radius:var(--radius);
+  font-weight:600;font-size:13px;
+  transition:background .15s,transform .1s;
+}
+.primary:hover{background:var(--copper-bright);}
+.primary:active{transform:scale(.98);}
+.primary:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+
+.ghost{
+  all:unset;cursor:pointer;color:var(--ink-dim);
+  padding:8px 12px;border:1px solid var(--hairline);border-radius:var(--radius);
+  font-size:12px;
+}
+.ghost:hover{color:var(--ink);border-color:var(--copper);}
+
+/* ---------- hero ---------- */
+.hero{
+  display:flex;justify-content:space-between;align-items:center;gap:24px;
+  background:linear-gradient(135deg,var(--surface),var(--surface-2));
+  border:1px solid var(--hairline);border-radius:var(--radius);
+  padding:34px 30px;margin-bottom:22px;flex-wrap:wrap;
+}
+.hero.compact{padding:24px 26px;}
+.hero h2{font-family:var(--font-display);font-size:30px;line-height:1.15;margin:8px 0 10px;font-weight:600;}
+.hero h2 em{color:var(--copper-bright);font-style:normal;}
+.hero p{color:var(--ink-dim);max-width:420px;margin:0 0 18px;}
+.hero-art{
+  font-size:52px;text-align:center;color:var(--copper);
+  display:flex;flex-direction:column;align-items:center;gap:10px;
+  filter:drop-shadow(0 0 18px rgba(193,122,69,.25));
+}
+.hero-art div{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;color:var(--ink-dim);}
+.points{text-align:right;font-family:var(--font-mono);font-size:32px;color:var(--cell-green);font-weight:600;}
+.points small{display:block;font-size:10px;color:var(--ink-dim);letter-spacing:.1em;font-weight:400;}
+
+/* ---------- stat grid ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+@media (max-width:700px){.stats{grid-template-columns:repeat(2,1fr);}}
+.stat{
+  background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);
+  padding:16px 16px 14px;position:relative;overflow:hidden;
+}
+.stat::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:2px;background:var(--copper);opacity:.35;}
+.stat span{display:block;color:var(--ink-dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em;}
+.stat strong{display:block;font-family:var(--font-mono);font-size:26px;margin-top:6px;color:var(--ink);}
+.stat small{display:block;color:var(--ink-dim);font-size:11px;margin-top:2px;}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media (max-width:760px){.grid2{grid-template-columns:1fr;}}
+
+.flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--font-mono);font-size:12px;}
+.flow b{background:var(--surface-2);border:1px solid var(--hairline);padding:7px 11px;border-radius:var(--radius);font-weight:500;}
+.flow i{color:var(--copper);font-style:normal;}
+
+.roles{display:flex;flex-wrap:wrap;gap:8px;}
+.roles span{background:var(--surface-2);border:1px solid var(--hairline);padding:8px 12px;border-radius:var(--radius);font-size:12.5px;}
+
+/* ---------- search & tables ---------- */
+.search{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+.search input{
+  flex:1;min-width:200px;background:var(--graphite);border:1px solid var(--hairline);color:var(--ink);
+  padding:10px 12px;border-radius:var(--radius);font-family:var(--font-mono);font-size:13px;
+}
+.search input:focus-visible,.modal input:focus-visible{outline:2px solid var(--copper);outline-offset:1px;}
+.search button{
+  all:unset;cursor:pointer;background:var(--surface-2);border:1px solid var(--hairline);
+  padding:10px 16px;border-radius:var(--radius);font-size:13px;color:var(--ink);
+}
+.search button:hover{border-color:var(--copper);}
+
+.hidden{display:none !important;}
+
+.data-table{width:100%;border-collapse:collapse;font-size:13px;}
+.data-table th{
+  text-align:left;color:var(--ink-dim);font-weight:500;font-size:11px;
+  text-transform:uppercase;letter-spacing:.06em;padding:8px 10px;border-bottom:1px solid var(--hairline);
+}
+.data-table td{padding:10px 10px;border-bottom:1px solid var(--hairline);font-family:var(--font-mono);font-size:12.5px;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:var(--surface-2);}
+.empty-row td{font-family:var(--font-body);color:var(--ink-dim);text-align:center;padding:22px;}
+
+.badge{
+  display:inline-block;padding:3px 9px;border-radius:99px;font-size:10.5px;
+  text-transform:uppercase;letter-spacing:.05em;font-family:var(--font-body);font-weight:600;
+}
+.badge.active{background:rgba(135,173,112,.16);color:var(--cell-green);}
+.badge.transit{background:rgba(193,122,69,.16);color:var(--copper-bright);}
+.badge.requested{background:rgba(156,150,134,.16);color:var(--ink-dim);}
+.badge.recycled{background:rgba(135,173,112,.16);color:var(--cell-green);}
+.badge.eol{background:rgba(189,91,63,.16);color:var(--alert-rust);}
+
+/* ---------- passport card ---------- */
+.passport-card{
+  background:var(--surface);border:1px solid var(--copper);border-radius:var(--radius);
+  padding:22px;margin-bottom:20px;display:grid;grid-template-columns:1fr auto;gap:20px;
+}
+@media (max-width:640px){.passport-card{grid-template-columns:1fr;}}
+.passport-card h3{font-family:var(--font-mono);color:var(--copper-bright);font-size:16px;margin:0 0 12px;}
+.passport-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;}
+@media (max-width:480px){.passport-fields{grid-template-columns:1fr;}}
+.passport-fields div{font-size:12.5px;}
+.passport-fields span{display:block;color:var(--ink-dim);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;}
+.passport-fields b{font-family:var(--font-mono);font-weight:500;}
+
+/* ---------- segmented cell gauge (signature element) ---------- */
+.gauge-block{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:120px;}
+.gauge{display:flex;gap:3px;align-items:flex-end;}
+.gauge i{
+  width:9px;height:26px;background:var(--hairline);border-radius:1px;font-style:normal;
+  transition:background .25s;
+}
+.gauge i.on{background:var(--cell-green);}
+.gauge i.on.warn{background:var(--copper);}
+.gauge i.on.low{background:var(--alert-rust);}
+.gauge-read{font-family:var(--font-mono);font-size:20px;font-weight:600;}
+.gauge-label{font-size:10.5px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.08em;}
+
+/* full-width compliance gauge on EPR page */
+.compliance-gauge{display:flex;gap:5px;margin:16px 0 10px;}
+.compliance-gauge i{flex:1;height:34px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:1px;font-style:normal;transition:background .3s;}
+.compliance-gauge i.on{background:var(--cell-green);border-color:var(--cell-green);}
+
+/* ---------- lifecycle route (pickup) ---------- */
+.route{display:flex;gap:0;margin-top:16px;flex-wrap:wrap;}
+.route > div{
+  flex:1;min-width:120px;padding:12px 14px 12px 18px;position:relative;border-top:2px solid var(--hairline);
+}
+.route > div::before{
+  content:"";position:absolute;top:-5px;left:-4px;width:8px;height:8px;border-radius:50%;background:var(--copper);
+}
+.route > div b{display:block;font-family:var(--font-display);font-size:13px;}
+.route > div span{color:var(--ink-dim);font-size:11.5px;}
+
+/* ---------- rewards ---------- */
+.clean{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px;font-size:13px;}
+.leader{margin:0;padding:0 0 0 4px;display:flex;flex-direction:column;gap:10px;}
+.leader li{display:flex;justify-content:space-between;list-style:none;border-bottom:1px solid var(--hairline);padding-bottom:9px;font-size:13px;}
+.leader li:last-child{border-bottom:none;}
+.leader b{font-weight:500;}
+.leader span{font-family:var(--font-mono);color:var(--cell-green);}
+
+/* ---------- modal ---------- */
+.modal{
+  display:none;position:fixed;inset:0;background:rgba(15,14,11,.72);
+  align-items:center;justify-content:center;padding:20px;z-index:50;
+}
+.modal.open{display:flex;}
+.modal-box{
+  background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);
+  padding:26px;width:100%;max-width:420px;position:relative;
+}
+.modal-box h2{font-family:var(--font-display);font-size:18px;margin:0 0 16px;}
+.modal-box form{display:flex;flex-direction:column;gap:10px;}
+.modal-box input{
+  background:var(--graphite);border:1px solid var(--hairline);color:var(--ink);
+  padding:10px 12px;border-radius:var(--radius);font-family:var(--font-mono);font-size:13px;width:100%;
+}
+.modal-box input::placeholder{color:var(--ink-dim);}
+.close{
+  all:unset;position:absolute;top:14px;right:16px;cursor:pointer;color:var(--ink-dim);font-size:20px;line-height:1;
+}
+.close:hover{color:var(--ink);}
+
+.toast{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surface-2);border:1px solid var(--copper);color:var(--ink);
+  padding:11px 18px;border-radius:var(--radius);font-size:13px;opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;z-index:80;font-family:var(--font-mono);
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">↻</span><div><b>EcoLoop</b><small>AI Battery Circularity</small></div></div>
+    <nav>
+      <button class="nav active" data-page="dashboard">Dashboard</button>
+      <button class="nav" data-page="passport">Battery Passport</button>
+      <button class="nav" data-page="pickup">RecycleRoute</button>
+      <button class="nav" data-page="rewards">GreenVolt Rewards</button>
+      <button class="nav" data-page="epr">EPR Dashboard</button>
+    </nav>
+    <div class="side-card"><b>Phase 0 MVP</b><p>Digital battery identity + circular lifecycle tracking.</p></div>
+  </aside>
+
+  <main>
+    <header><div><span class="eyebrow">BATTERY CIRCULARITY PLATFORM</span><h1 id="pageTitle">Overview</h1></div>
+      <div class="user-pill">● Admin <span>Government / Admin</span></div>
+    </header>
+
+    <section id="dashboard" class="page active">
+      <div class="hero">
+        <div><span class="eyebrow">CIRCULAR BATTERY ECOSYSTEM</span><h2>Track every battery.<br><em>Close the loop.</em></h2>
+        <p>From manufacturing and ownership to pickup, recycling and recovered materials.</p>
+        <button class="primary" onclick="showPage('passport')">Open Battery Passport →</button></div>
+        <div class="hero-art">🔋<div>MANUFACTURE → USE → RECYCLE</div></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>Batteries</span><strong id="sBatteries">—</strong><small>registered</small></div>
+        <div class="stat"><span>Pickup Requests</span><strong id="sPickups">—</strong><small>lifecycle logistics</small></div>
+        <div class="stat"><span>Recycled</span><strong id="sRecycled">—</strong><small>closed-loop records</small></div>
+        <div class="stat"><span>EPR Score</span><strong id="sCompliance">—%</strong><small>recycled / sold</small></div>
+      </div>
+      <div class="grid2">
+        <div class="panel"><h3>Lifecycle</h3><div class="flow"><b>Manufacture</b><i>→</i><b>QR Passport</b><i>→</i><b>Usage</b><i>→</i><b>EOL</b><i>→</i><b>Recycler</b></div></div>
+        <div class="panel"><h3>Five user roles</h3><div class="roles"><span>🏭 Manufacturer</span><span>🚗 Owner</span><span>🔧 Workshop</span><span>♻️ Recycler</span><span>🏛️ Admin</span></div></div>
+      </div>
+    </section>
+
+    <section id="passport" class="page">
+      <div class="panel">
+        <div class="section-head"><div><h2>Battery Passport</h2><p>Register and inspect a digital battery identity.</p></div><button class="primary" onclick="openModal()">+ Register Battery</button></div>
+        <div class="search"><input id="batterySearch" placeholder="Enter Battery ID, e.g. BAT-2026-0001"><button onclick="lookupBattery()">Scan / Search</button></div>
+      </div>
+      <div id="batteryResult" class="passport-card hidden"></div>
+      <div class="panel"><h3>Registered batteries</h3><div id="batteryTable"></div></div>
+    </section>
+
+    <section id="pickup" class="page">
+      <div class="panel"><div class="section-head"><div><h2>RecycleRoute</h2><p>Move end-of-life batteries to certified collection and recycling.</p></div><button class="primary" onclick="openPickupModal()">Request Pickup</button></div>
+      <div class="route"><div><b>Requested</b><span>Owner submits location</span></div><div><b>Accepted</b><span>Collector assigned</span></div><div><b>Collected</b><span>Battery secured</span></div><div><b>In Transit</b><span>Moving to recycler</span></div><div><b>Delivered</b><span>Recycler receives it</span></div></div></div>
+      <div class="panel"><h3>Pickup requests</h3><div id="pickupTable"></div></div>
+    </section>
+
+    <section id="rewards" class="page">
+      <div class="hero compact"><div><span class="eyebrow">GREENVOLT</span><h2>Reward circular behavior.</h2><p>Points can be credited after pickup and recycling confirmation.</p></div><div class="points">1,250<small>GREEN POINTS</small></div></div>
+      <div class="grid2"><div class="panel"><h3>How points are earned</h3><ul class="clean"><li>✓ Successful battery pickup</li><li>✓ Verified recycling</li><li>✓ Circularity milestones</li></ul></div><div class="panel"><h3>Leaderboard</h3><ol class="leader"><li><b>Arun EV</b><span>3,420</span></li><li><b>Green Mobility</b><span>2,870</span></li><li><b>Eco Rider</b><span>2,410</span></li></ol></div></div>
+    </section>
+
+    <section id="epr" class="page">
+      <div class="panel"><span class="eyebrow">COMPLIANCE</span><h2>EPR Dashboard</h2><p>Monitor production, returns and recycling performance.</p></div>
+      <div class="stats"><div class="stat"><span>Produced</span><strong id="eProduced">—</strong></div><div class="stat"><span>Sold</span><strong id="eSold">—</strong></div><div class="stat"><span>Recycled</span><strong id="eRecycled">—</strong></div><div class="stat"><span>Compliance</span><strong id="eCompliance">—%</strong></div></div>
+      <div class="panel chart"><h3>Compliance progress</h3><div class="compliance-gauge" id="complianceGauge"></div><p id="gaugeText">Loading…</p></div>
+    </section>
+  </main>
+</div>
+
+<div id="modal" class="modal"><div class="modal-box"><button class="close" onclick="closeModal()">×</button><h2 id="modalTitle">Register Battery</h2><form id="batteryForm">
+<input name="serialNumber" required placeholder="Serial number">
+<input name="chemistry" required placeholder="Chemistry (e.g. LFP)">
+<input name="manufacturer" required placeholder="Manufacturer">
+<input name="manufacturingDate" type="date" required>
+<input name="warranty" placeholder="Warranty">
+<input name="soh" type="number" min="0" max="100" value="100" placeholder="SOH %">
+<button class="primary" type="submit">Create Passport</button></form></div></div>
+
+<div id="pickupModal" class="modal"><div class="modal-box"><button class="close" onclick="closePickupModal()">×</button><h2>Request Battery Pickup</h2><form id="pickupForm"><input name="batteryId" required placeholder="Battery ID"><input name="requesterId" placeholder="Owner ID" value="OWNER-DEMO"><input name="location" required placeholder="Pickup location"><button class="primary" type="submit">Submit Request</button></form></div></div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+/* ---------- state ---------- */
+const STORE_KEY = 'ecoloop_state_v1';
+
+function loadState(){
+  const raw = localStorage.getItem(STORE_KEY);
+  if(raw){ try{ return JSON.parse(raw); }catch(e){ /* fall through */ } }
+  return seedState();
+}
+
+function seedState(){
+  return {
+    nextBatteryNum: 4,
+    nextPickupNum: 3,
+    epr: { produced: 5000, sold: 4200 },
+    batteries: [
+      {id:'BAT-2026-0001', serialNumber:'SN-88213-A', chemistry:'LFP', manufacturer:'Arun EV', manufacturingDate:'2025-11-02', warranty:'8 years', soh:96, status:'Active', createdAt:Date.now()-1000*60*60*24*40},
+      {id:'BAT-2026-0002', serialNumber:'SN-77004-B', chemistry:'NMC', manufacturer:'Green Mobility', manufacturingDate:'2024-05-18', warranty:'5 years', soh:61, status:'Active', createdAt:Date.now()-1000*60*60*24*300},
+      {id:'BAT-2026-0003', serialNumber:'SN-55190-C', chemistry:'LFP', manufacturer:'Eco Rider', manufacturingDate:'2022-01-09', warranty:'6 years', soh:38, status:'Recycled', createdAt:Date.now()-1000*60*60*24*900},
+    ],
+    pickups: [
+      {id:'PICKUP-0001', batteryId:'BAT-2026-0003', requesterId:'OWNER-118', location:'Whitefield, Bengaluru', status:'Delivered', createdAt:Date.now()-1000*60*60*24*30},
+      {id:'PICKUP-0002', batteryId:'BAT-2026-0002', requesterId:'OWNER-204', location:'Guindy, Chennai', status:'In Transit', createdAt:Date.now()-1000*60*60*24*3},
+    ],
+  };
+}
+
+let state = loadState();
+function saveState(){ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
+
+const ROUTE_STAGES = ['Requested','Accepted','Collected','In Transit','Delivered'];
+
+/* ---------- navigation ---------- */
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav').forEach(n=>n.classList.remove('active'));
+  document.getElementById(name).classList.add('active');
+  document.querySelector(`.nav[data-page="${name}"]`).classList.add('active');
+  const titles = {dashboard:'Overview', passport:'Battery Passport', pickup:'RecycleRoute', rewards:'GreenVolt Rewards', epr:'EPR Dashboard'};
+  document.getElementById('pageTitle').textContent = titles[name] || '';
+  if(name==='passport') renderBatteryTable();
+  if(name==='pickup') renderPickupTable();
+  if(name==='epr') renderEPR();
+  if(name==='dashboard') renderDashboard();
+}
+
+document.querySelectorAll('.nav').forEach(btn=>{
+  btn.addEventListener('click', ()=> showPage(btn.dataset.page));
+});
+
+/* ---------- gauges (signature element) ---------- */
+function gaugeSegments(pct, segCount, container){
+  container.innerHTML = '';
+  const on = Math.round((pct/100)*segCount);
+  for(let i=0;i<segCount;i++){
+    const seg = document.createElement('i');
+    if(i < on){
+      seg.classList.add('on');
+      if(pct < 30) seg.classList.add('low');
+      else if(pct < 65) seg.classList.add('warn');
+    }
+    container.appendChild(seg);
+  }
+}
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=> el.classList.remove('show'), 2400);
+}
+
+/* ---------- dashboard ---------- */
+function renderDashboard(){
+  const recycled = state.batteries.filter(b=>b.status==='Recycled').length;
+  document.getElementById('sBatteries').textContent = state.batteries.length;
+  document.getElementById('sPickups').textContent = state.pickups.length;
+  document.getElementById('sRecycled').textContent = recycled;
+  const compliance = state.epr.sold ? Math.round((recycled/state.epr.sold)*1000)/10 : 0;
+  document.getElementById('sCompliance').textContent = compliance + '%';
+}
+
+/* ---------- battery passport ---------- */
+function nextBatteryId(){
+  const id = `BAT-2026-${String(state.nextBatteryNum).padStart(4,'0')}`;
+  state.nextBatteryNum++;
+  return id;
+}
+
+function statusBadge(status){
+  const map = {Active:'active', 'In Transit':'transit', Requested:'requested', Recycled:'recycled', 'End of Life':'eol'};
+  return `<span class="badge ${map[status]||'requested'}">${status}</span>`;
+}
+
+function renderBatteryTable(){
+  const el = document.getElementById('batteryTable');
+  if(!state.batteries.length){
+    el.innerHTML = `<table class="data-table"><tbody><tr class="empty-row"><td>No batteries registered yet — create the first passport above.</td></tr></tbody></table>`;
+    return;
+  }
+  const rows = state.batteries.map(b=>`
+    <tr>
+      <td>${b.id}</td>
+      <td>${b.manufacturer}</td>
+      <td>${b.chemistry}</td>
+      <td>${b.soh}%</td>
+      <td>${statusBadge(b.status)}</td>
+      <td><button class="ghost" onclick="viewBattery('${b.id}')">View</button></td>
+    </tr>`).join('');
+  el.innerHTML = `<table class="data-table">
+    <thead><tr><th>Battery ID</th><th>Manufacturer</th><th>Chemistry</th><th>SOH</th><th>Status</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+function viewBattery(id){
+  document.getElementById('batterySearch').value = id;
+  lookupBattery();
+}
+
+function lookupBattery(){
+  const q = document.getElementById('batterySearch').value.trim().toUpperCase();
+  const result = document.getElementById('batteryResult');
+  if(!q){ result.classList.add('hidden'); return; }
+  const b = state.batteries.find(x=>x.id.toUpperCase()===q || x.serialNumber.toUpperCase()===q);
+  if(!b){
+    result.classList.remove('hidden');
+    result.innerHTML = `<p style="color:var(--ink-dim)">No passport found for <b style="font-family:var(--font-mono);color:var(--ink)">${q}</b>. Check the battery ID and try again.</p>`;
+    return;
+  }
+  result.classList.remove('hidden');
+  result.innerHTML = `
+    <div>
+      <h3>${b.id}</h3>
+      <div class="passport-fields">
+        <div><span>Serial number</span><b>${b.serialNumber}</b></div>
+        <div><span>Manufacturer</span><b>${b.manufacturer}</b></div>
+        <div><span>Chemistry</span><b>${b.chemistry}</b></div>
+        <div><span>Manufactured</span><b>${b.manufacturingDate}</b></div>
+        <div><span>Warranty</span><b>${b.warranty||'—'}</b></div>
+        <div><span>Status</span><b>${b.status}</b></div>
+      </div>
+    </div>
+    <div class="gauge-block">
+      <div class="gauge" id="sohGauge"></div>
+      <div class="gauge-read">${b.soh}%</div>
+      <div class="gauge-label">State of health</div>
+    </div>`;
+  gaugeSegments(b.soh, 10, document.getElementById('sohGauge'));
+}
+
+document.getElementById('batteryForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const b = {
+    id: nextBatteryId(),
+    serialNumber: f.get('serialNumber'),
+    chemistry: f.get('chemistry'),
+    manufacturer: f.get('manufacturer'),
+    manufacturingDate: f.get('manufacturingDate'),
+    warranty: f.get('warranty'),
+    soh: Number(f.get('soh')) || 100,
+    status: 'Active',
+    createdAt: Date.now(),
+  };
+  state.batteries.push(b);
+  state.epr.produced++;
+  saveState();
+  renderBatteryTable();
+  renderDashboard();
+  closeModal();
+  e.target.reset();
+  toast(`Passport created — ${b.id}`);
+});
+
+/* ---------- pickup / RecycleRoute ---------- */
+function nextPickupId(){
+  const id = `PICKUP-${String(state.nextPickupNum).padStart(4,'0')}`;
+  state.nextPickupNum++;
+  return id;
+}
+
+function renderPickupTable(){
+  const el = document.getElementById('pickupTable');
+  if(!state.pickups.length){
+    el.innerHTML = `<table class="data-table"><tbody><tr class="empty-row"><td>No pickup requests yet.</td></tr></tbody></table>`;
+    return;
+  }
+  const rows = state.pickups.map(p=>{
+    const isDone = p.status === 'Delivered';
+    return `<tr>
+      <td>${p.id}</td>
+      <td>${p.batteryId}</td>
+      <td>${p.location}</td>
+      <td>${statusBadge(p.status)}</td>
+      <td>${isDone ? '—' : `<button class="ghost" onclick="advancePickup('${p.id}')">Advance →</button>`}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<table class="data-table">
+    <thead><tr><th>Request ID</th><th>Battery</th><th>Location</th><th>Stage</th><th></th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+function advancePickup(id){
+  const p = state.pickups.find(x=>x.id===id);
+  if(!p) return;
+  const idx = ROUTE_STAGES.indexOf(p.status);
+  if(idx < ROUTE_STAGES.length - 1){
+    p.status = ROUTE_STAGES[idx+1];
+    if(p.status === 'Delivered'){
+      const b = state.batteries.find(x=>x.id===p.batteryId);
+      if(b) b.status = 'Recycled';
+      toast(`${p.batteryId} delivered to recycler — marked recycled`);
+    } else {
+      toast(`${p.id} moved to "${p.status}"`);
+    }
+    saveState();
+    renderPickupTable();
+    renderDashboard();
+    renderEPR();
+  }
+}
+
+document.getElementById('pickupForm').addEventListener('submit', e=>{
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const batteryId = f.get('batteryId').trim().toUpperCase();
+  const p = {
+    id: nextPickupId(),
+    batteryId,
+    requesterId: f.get('requesterId') || 'OWNER-DEMO',
+    location: f.get('location'),
+    status: 'Requested',
+    createdAt: Date.now(),
+  };
+  state.pickups.push(p);
+  saveState();
+  renderPickupTable();
+  renderDashboard();
+  closePickupModal();
+  e.target.reset();
+  toast(`Pickup requested — ${p.id}`);
+});
+
+/* ---------- EPR dashboard ---------- */
+function renderEPR(){
+  const recycled = state.batteries.filter(b=>b.status==='Recycled').length;
+  document.getElementById('eProduced').textContent = state.epr.produced;
+  document.getElementById('eSold').textContent = state.epr.sold;
+  document.getElementById('eRecycled').textContent = recycled;
+  const compliance = state.epr.sold ? Math.min(100, Math.round((recycled/state.epr.sold)*1000)/10) : 0;
+  document.getElementById('eCompliance').textContent = compliance + '%';
+  gaugeSegments(compliance, 20, document.getElementById('complianceGauge'));
+  document.getElementById('gaugeText').textContent = `${recycled} of ${state.epr.sold} sold units recovered — ${compliance}% of EPR target`;
+}
+
+/* ---------- modals ---------- */
+function openModal(){ document.getElementById('modal').classList.add('open'); }
+function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function openPickupModal(){ document.getElementById('pickupModal').classList.add('open'); }
+function closePickupModal(){ document.getElementById('pickupModal').classList.remove('open'); }
+document.querySelectorAll('.modal').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target === m) m.classList.remove('open'); });
+});
+document.addEventListener('keydown', e=>{
+  if(e.key === 'Escape'){ closeModal(); closePickupModal(); }
+});
+
+/* ---------- init ---------- */
+renderDashboard();
+renderBatteryTable();
+renderPickupTable();
+renderEPR();
+</script>
+</body></html>
